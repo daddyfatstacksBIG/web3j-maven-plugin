@@ -1,6 +1,5 @@
-pragma solidity >=0.4.19 <0.6.0;
+pragma solidity >=0.4.19;
 
 interface NoImplementationInterfaceCheck {
     function check() external;
 }
-

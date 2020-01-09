@@ -1,13 +1,12 @@
-pragma solidity >=0.4.19 <0.6.0;
+pragma solidity >=0.6.0;
 
 interface InterCheck {
     function check() external;
 }
 
-contract ChecImpl is InterCheck {
-    function check() public {
+contract CheckImpl is InterCheck {
+    function check() public override {
         uint256 i = 0;
         i++;
     }
 }
-
