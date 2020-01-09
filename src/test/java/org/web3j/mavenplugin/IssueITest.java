@@ -1,5 +1,22 @@
 package org.web3j.mavenplugin;
 
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.SystemStreamLog;
 import org.apache.maven.plugin.testing.MojoRule;
@@ -11,189 +28,181 @@ import org.web3j.mavenplugin.solidity.CompilerResult;
 import org.web3j.mavenplugin.solidity.SolidityCompiler;
 import org.web3j.mavenplugin.solidity.VersionMismatchException;
 
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 public class IssueITest {
 
-    @Rule
-    public MojoRule mojoRule = new MojoRule();
+  @Rule public MojoRule mojoRule = new MojoRule();
 
-    @Rule
-    public TestResources resources = new TestResources();
+  @Rule public TestResources resources = new TestResources();
 
-    @Rule
-    public TemporaryFolder testFolder = new TemporaryFolder();
+  @Rule public TemporaryFolder testFolder = new TemporaryFolder();
 
-    @Test
-    public void issue13_bigInteger() throws Exception {
-        File pom = new File(resources.getBasedir("issue"), "issue13.pom.xml");
-        assertNotNull(pom);
-        assertTrue(pom.exists());
+  @Test
+  public void issue13_bigInteger() throws Exception {
+    File pom = new File(resources.getBasedir("issue"), "issue13.pom.xml");
+    assertNotNull(pom);
+    assertTrue(pom.exists());
 
-        JavaClassGeneratorMojo mojo = (JavaClassGeneratorMojo) mojoRule.lookupMojo("generate-sources", pom);
-        assertNotNull(mojo);
+    JavaClassGeneratorMojo mojo =
+        (JavaClassGeneratorMojo)mojoRule.lookupMojo("generate-sources", pom);
+    assertNotNull(mojo);
 
-        mojo.sourceDestination = testFolder.getRoot().getPath();
-        mojo.outputFormat = "java";
-        mojo.execute();
+    mojo.sourceDestination = testFolder.getRoot().getPath();
+    mojo.outputFormat = "java";
+    mojo.execute();
 
-        Path path = Paths.get(mojo.sourceDestination);
+    Path path = Paths.get(mojo.sourceDestination);
 
-        List<Path> files = Files
-                .find(path, 99, (p, bfa) -> bfa.isRegularFile())
-                .filter(file -> file.toString().endsWith("java"))
-                .collect(Collectors.toList());
-        assertThat("Predictor is created", files.size(), is(1));
-        assertThat(files.get(0).getFileName().toString(), is("Predictor.java"));
+    List<Path> files = Files.find(path, 99, (p, bfa) -> bfa.isRegularFile())
+                           .filter(file -> file.toString().endsWith("java"))
+                           .collect(Collectors.toList());
+    assertThat("Predictor is created", files.size(), is(1));
+    assertThat(files.get(0).getFileName().toString(), is("Predictor.java"));
+  }
+
+  @Test
+  public void issue17() throws Exception {
+    File pom = new File(resources.getBasedir("issue/17"), "pom.xml");
+    assertNotNull(pom);
+    assertTrue(pom.exists());
+
+    JavaClassGeneratorMojo mojo =
+        (JavaClassGeneratorMojo)mojoRule.lookupConfiguredMojo(
+            resources.getBasedir("issue/17"), "generate-sources");
+    assertNotNull(mojo);
+
+    mojo.sourceDestination = testFolder.getRoot().getPath();
+    mojo.execute();
+
+    Path path = Paths.get(mojo.sourceDestination);
+
+    List<String> files = Files.find(path, 99, (p, bfa) -> bfa.isRegularFile())
+                             .filter(file -> file.toString().endsWith("java"))
+                             .map(p -> p.toFile().getName())
+                             .collect(Collectors.toList());
+    assertThat("All java class files are generated", files.size(), is(5));
+    assertTrue(files.contains("Issue17import1.java"));
+    assertTrue(files.contains("Issue17import2.java"));
+    assertTrue(files.contains("Issue17relative1.java"));
+    assertTrue(files.contains("Issue17relative2.java"));
+    assertTrue(files.contains("Issue17main.java"));
+  }
+
+  @Test
+  public void issue09() throws MojoExecutionException {
+    SolidityCompiler solidityCompiler =
+        SolidityCompiler.getInstance(new SystemStreamLog());
+    Set<String> sources = Collections.singleton("issue-09.sol");
+
+    CompilerResult compilerResult = solidityCompiler.compileSrc(
+        "src/test/resources/", sources, new String[0],
+        SolidityCompiler.Options.ABI, SolidityCompiler.Options.BIN);
+
+    assertFalse(compilerResult.isFailed());
+  }
+
+  @Test
+  public void issue17_1() throws Exception {
+    File pom = new File(resources.getBasedir("issue/17.1"), "pom.xml");
+    assertNotNull(pom);
+    assertTrue(pom.exists());
+
+    JavaClassGeneratorMojo mojo =
+        (JavaClassGeneratorMojo)mojoRule.lookupConfiguredMojo(
+            resources.getBasedir("issue/17.1"), "generate-sources");
+    assertNotNull(mojo);
+
+    mojo.sourceDestination = testFolder.getRoot().getPath();
+    mojo.execute();
+
+    Path path = Paths.get(mojo.sourceDestination);
+
+    List<String> files = Files.find(path, 99, (p, bfa) -> bfa.isRegularFile())
+                             .filter(file -> file.toString().endsWith("java"))
+                             .map(p -> p.toFile().getName())
+                             .collect(Collectors.toList());
+    assertThat("All java class files are generated", files.size(), is(5));
+    assertTrue(files.contains("Issue17import1.java"));
+    assertTrue(files.contains("Issue17import2.java"));
+    assertTrue(files.contains("Issue17relative1.java"));
+    assertTrue(files.contains("Issue17relative2.java"));
+    assertTrue(files.contains("Issue17main.java"));
+  }
+
+  @Test
+  public void issue23() throws Exception {
+    File pom = new File(resources.getBasedir("issue/23"), "pom.xml");
+    assertNotNull(pom);
+    assertTrue(pom.exists());
+
+    JavaClassGeneratorMojo mojo =
+        (JavaClassGeneratorMojo)mojoRule.lookupConfiguredMojo(
+            resources.getBasedir("issue/23"), "generate-sources");
+    assertNotNull(mojo);
+
+    mojo.sourceDestination = testFolder.getRoot().getPath();
+
+    try {
+      mojo.execute();
+    } catch (VersionMismatchException v) {
+      org.junit.Assume.assumeNoException(
+          "installed solc Version '" + v.getSolCVersion() +
+              "', but used version in contract '" +
+              v.getSolidityContractVersion() + "'",
+          v);
     }
 
-    @Test
-    public void issue17() throws Exception {
-        File pom = new File(resources.getBasedir("issue/17"), "pom.xml");
-        assertNotNull(pom);
-        assertTrue(pom.exists());
+    Path path = Paths.get(mojo.sourceDestination);
 
-        JavaClassGeneratorMojo mojo = (JavaClassGeneratorMojo) mojoRule.lookupConfiguredMojo(resources.getBasedir("issue/17"), "generate-sources");
-        assertNotNull(mojo);
+    List<String> files = Files.find(path, 99, (p, bfa) -> bfa.isRegularFile())
+                             .filter(file -> file.toString().endsWith("java"))
+                             .map(p -> p.toFile().getName())
+                             .collect(Collectors.toList());
+    assertThat("Interface and java classes are generated", files.size(), is(3));
+    assertTrue(files.contains("CheckImpl.java"));
+  }
 
-        mojo.sourceDestination = testFolder.getRoot().getPath();
-        mojo.execute();
+  @Test
+  public void issue9_library() throws Exception {
+    File pom = new File(resources.getBasedir("issue"), "issue9.pom.xml");
+    assertNotNull(pom);
+    assertTrue(pom.exists());
 
-        Path path = Paths.get(mojo.sourceDestination);
+    JavaClassGeneratorMojo mojo =
+        (JavaClassGeneratorMojo)mojoRule.lookupMojo("generate-sources", pom);
+    assertNotNull(mojo);
 
-        List<String> files = Files
-                .find(path, 99, (p, bfa) -> bfa.isRegularFile())
-                .filter(file -> file.toString().endsWith("java"))
-                .map(p -> p.toFile().getName())
-                .collect(Collectors.toList());
-        assertThat("All java class files are generated", files.size(), is(5));
-        assertTrue(files.contains("Issue17import1.java"));
-        assertTrue(files.contains("Issue17import2.java"));
-        assertTrue(files.contains("Issue17relative1.java"));
-        assertTrue(files.contains("Issue17relative2.java"));
-        assertTrue(files.contains("Issue17main.java"));
+    mojo.sourceDestination = testFolder.getRoot().getPath();
+    mojo.outputFormat = "java";
+    mojo.execute();
+
+    Path path = Paths.get(mojo.sourceDestination);
+
+    List<Path> files = Files.find(path, 99, (p, bfa) -> bfa.isRegularFile())
+                           .filter(file -> file.toString().endsWith("java"))
+                           .collect(Collectors.toList());
+    assertThat("ConvertLib is created", files.size(), is(1));
+    assertThat(files.get(0).getFileName().toString(), is("ConvertLib.java"));
+  }
+
+  @Test
+  public void pragmaVersionTooHigh() throws Exception {
+    File pom = new File(resources.getBasedir("issue"), "pragmaTooHigh.pom.xml");
+    assertNotNull(pom);
+    assertTrue(pom.exists());
+
+    JavaClassGeneratorMojo mojo =
+        (JavaClassGeneratorMojo)mojoRule.lookupMojo("generate-sources", pom);
+    assertNotNull(mojo);
+
+    mojo.sourceDestination = testFolder.getRoot().getPath();
+    mojo.outputFormat = "java";
+    try {
+      mojo.execute();
+      fail("Should throw a version mismatch exception.");
+    } catch (VersionMismatchException v) {
+      assertThat(v.getSolidityContractVersion(),
+                 containsString("pragma solidity >=10.0.0;"));
+      assertThat(v.getSolCVersion(), is(notNullValue()));
     }
-
-    @Test
-    public void issue09() throws MojoExecutionException {
-        SolidityCompiler solidityCompiler = SolidityCompiler.getInstance(new SystemStreamLog());
-        Set<String> sources = Collections.singleton("issue-09.sol");
-
-        CompilerResult compilerResult = solidityCompiler.compileSrc("src/test/resources/", sources, new String[0], SolidityCompiler.Options.ABI, SolidityCompiler.Options.BIN);
-
-        assertFalse(compilerResult.isFailed());
-    }
-
-    @Test
-    public void issue17_1() throws Exception {
-        File pom = new File(resources.getBasedir("issue/17.1"), "pom.xml");
-        assertNotNull(pom);
-        assertTrue(pom.exists());
-
-        JavaClassGeneratorMojo mojo = (JavaClassGeneratorMojo) mojoRule.lookupConfiguredMojo(resources.getBasedir("issue/17.1"), "generate-sources");
-        assertNotNull(mojo);
-
-        mojo.sourceDestination = testFolder.getRoot().getPath();
-        mojo.execute();
-
-        Path path = Paths.get(mojo.sourceDestination);
-
-        List<String> files = Files
-                .find(path, 99, (p, bfa) -> bfa.isRegularFile())
-                .filter(file -> file.toString().endsWith("java"))
-                .map(p -> p.toFile().getName())
-                .collect(Collectors.toList());
-        assertThat("All java class files are generated", files.size(), is(5));
-        assertTrue(files.contains("Issue17import1.java"));
-        assertTrue(files.contains("Issue17import2.java"));
-        assertTrue(files.contains("Issue17relative1.java"));
-        assertTrue(files.contains("Issue17relative2.java"));
-        assertTrue(files.contains("Issue17main.java"));
-    }
-
-    @Test
-    public void issue23() throws Exception {
-        File pom = new File(resources.getBasedir("issue/23"), "pom.xml");
-        assertNotNull(pom);
-        assertTrue(pom.exists());
-
-        JavaClassGeneratorMojo mojo = (JavaClassGeneratorMojo) mojoRule.lookupConfiguredMojo(resources.getBasedir("issue/23"), "generate-sources");
-        assertNotNull(mojo);
-
-        mojo.sourceDestination = testFolder.getRoot().getPath();
-
-        try {
-            mojo.execute();
-        } catch (VersionMismatchException v) {
-            org.junit.Assume.assumeNoException("installed solc Version '" + v.getSolCVersion() + "', but used version in contract '" + v.getSolidityContractVersion() + "'", v);
-        }
-
-        Path path = Paths.get(mojo.sourceDestination);
-
-        List<String> files = Files
-                .find(path, 99, (p, bfa) -> bfa.isRegularFile())
-                .filter(file -> file.toString().endsWith("java"))
-                .map(p -> p.toFile().getName()).collect(Collectors.toList());
-        assertThat("Interface and java classes are generated", files.size(), is(3));
-        assertTrue(files.contains("CheckImpl.java"));
-    }
-
-    @Test
-    public void issue9_library() throws Exception {
-        File pom = new File(resources.getBasedir("issue"), "issue9.pom.xml");
-        assertNotNull(pom);
-        assertTrue(pom.exists());
-
-        JavaClassGeneratorMojo mojo = (JavaClassGeneratorMojo) mojoRule.lookupMojo("generate-sources", pom);
-        assertNotNull(mojo);
-
-        mojo.sourceDestination = testFolder.getRoot().getPath();
-        mojo.outputFormat = "java";
-        mojo.execute();
-
-        Path path = Paths.get(mojo.sourceDestination);
-
-        List<Path> files = Files
-                .find(path, 99, (p, bfa) -> bfa.isRegularFile())
-                .filter(file -> file.toString().endsWith("java"))
-                .collect(Collectors.toList());
-        assertThat("ConvertLib is created", files.size(), is(1));
-        assertThat(files.get(0).getFileName().toString(), is("ConvertLib.java"));
-    }
-
-    @Test
-    public void pragmaVersionTooHigh() throws Exception {
-        File pom = new File(resources.getBasedir("issue"), "pragmaTooHigh.pom.xml");
-        assertNotNull(pom);
-        assertTrue(pom.exists());
-
-        JavaClassGeneratorMojo mojo = (JavaClassGeneratorMojo) mojoRule.lookupMojo("generate-sources", pom);
-        assertNotNull(mojo);
-
-        mojo.sourceDestination = testFolder.getRoot().getPath();
-        mojo.outputFormat = "java";
-        try {
-            mojo.execute();
-            fail("Should throw a version mismatch exception.");
-        } catch (VersionMismatchException v) {
-            assertThat(v.getSolidityContractVersion(), containsString("pragma solidity >=10.0.0;"));
-            assertThat(v.getSolCVersion(), is(notNullValue()));
-        }
-    }
+  }
 }
