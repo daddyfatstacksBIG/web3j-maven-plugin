@@ -10,4 +10,3 @@ contract CheckImpl is InterCheck {
         i++;
     }
 }
-

@@ -1,8 +1,8 @@
 pragma solidity >=0.4.19;
 
 /**
- * 
- * version 0.3 
+ *
+ * version 0.3
  */
 contract Predictor {
 
